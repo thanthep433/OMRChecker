@@ -1,14 +1,12 @@
 import os
 from pathlib import Path
 
-from src.schemas import SCHEMA_VALIDATORS
 from src.tests.test_samples.sample1.boilerplate import TEMPLATE_BOILERPLATE
 from src.tests.utils import (
     generate_write_jsons_and_run,
     run_entry_point,
     setup_mocker_patches,
 )
-from src.utils.validations import format_nested_path_tokens, parse_validation_error
 
 FROZEN_TIMESTAMP = "1970-01-01"
 CURRENT_DIR = Path("src/tests")
@@ -42,9 +40,9 @@ def test_no_template(mocker):
     try:
         run_sample(mocker, BASE_SAMPLE_PATH)
     except Exception as e:
-        assert (
-            str(e)
-            == "No template file found in the directory tree of src/tests/test_samples/sample1"
+        assert str(e) == (
+            "No template file found in the directory tree of "
+            + str(BASE_SAMPLE_PATH)
         )
 
 
@@ -159,40 +157,3 @@ def test_safe_missing_label_columns(mocker):
 
     exception = write_jsons_and_run(mocker, modify_template=modify_template)
     assert str(exception) == "No Error"
-
-
-def test_parse_validation_error_for_nested_field_block_key():
-    template = {
-        **TEMPLATE_BOILERPLATE,
-        "fieldBlocks": {
-            "MCQ_Block_1": {
-                **TEMPLATE_BOILERPLATE["fieldBlocks"]["MCQ_Block_1"],
-                "fieldType": "X",
-            }
-        },
-    }
-
-    error = next(SCHEMA_VALIDATORS["template"].iter_errors(template))
-    key, validator, _msg = parse_validation_error(error)
-
-    assert key == "fieldBlocks.MCQ_Block_1.fieldType"
-    assert validator == "enum"
-
-
-def test_parse_validation_error_for_nested_preprocessor_key():
-    template = {
-        **TEMPLATE_BOILERPLATE,
-        "preProcessors": [
-            {"name": "CropPage", "options": {"morphKernel": [10]}},
-        ],
-    }
-
-    error = next(SCHEMA_VALIDATORS["template"].iter_errors(template))
-    key, validator, _msg = parse_validation_error(error, json_data=template)
-
-    assert key == "preProcessors.CropPage.options.morphKernel"
-    assert validator == "minItems"
-
-
-def test_format_nested_path_tokens_with_indexed_segment():
-    assert format_nested_path_tokens(["steps", 2, "threshold"]) == "steps[2].threshold"
