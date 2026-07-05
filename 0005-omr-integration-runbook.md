@@ -2,7 +2,7 @@
 
 > **นี่คือ runbook สำหรับงานแรกของการ integration** — ทำทีละเฟส เฟสหนึ่งจบและ "พิสูจน์ว่าใช้ได้จริง" ก่อนขึ้นเฟสถัดไป
 > เป้าหมาย: ครูอัปโหลดรูปกระดาษคำตอบ → OMR อ่าน → ครูตรวจทาน → คะแนนไหลเข้า `grades` อัตโนมัติ
->
+> 
 > เอกสารนี้คือแผน "ลงมือทำ" ของ ADR [`0003-omr-integration.md`](0003-omr-integration.md) (source of truth ของดีไซน์)
 
 ---
@@ -13,10 +13,10 @@
 
 ## สองรีโปที่เกี่ยวข้อง (สำคัญ)
 
-| รีโป | path | บทบาท |
-|------|------|-------|
-| **OMRChecker** (รีโปนี้) | `d:\Cubic World\Claude_Workspace\OMRChecker` | engine อ่านกระดาษ — **ไม่แก้โค้ด engine** ใช้เป็น subprocess |
-| **Classwise** (รีโปเป้าหมาย) | `d:\Cubic World\Claude_Workspace\Classwise` | Django app — **โค้ดใหม่ทั้งหมดอยู่ที่นี่** (แอป `omr` ใหม่) |
+| รีโป                         | path                                         | บทบาท                                                        |
+| ---------------------------- | -------------------------------------------- | ------------------------------------------------------------ |
+| **OMRChecker** (รีโปนี้)     | `d:\Cubic World\Claude_Workspace\OMRChecker` | engine อ่านกระดาษ — **ไม่แก้โค้ด engine** ใช้เป็น subprocess |
+| **Classwise** (รีโปเป้าหมาย) | `d:\Cubic World\Claude_Workspace\Classwise`  | Django app — **โค้ดใหม่ทั้งหมดอยู่ที่นี่** (แอป `omr` ใหม่)  |
 
 > โค้ด Django ทุกบรรทัดใน runbook นี้เขียนใน `Classwise/` งานในรีโป `OMRChecker/` มีแค่ "อย่าแก้ ให้ engine นิ่ง + ยืนยันว่า template มาตรฐานถูกต้อง"
 
@@ -34,6 +34,7 @@
 ## Golden sheet — ของกลางสำหรับทดสอบทุกเฟส
 
 ก่อนเริ่ม เตรียม **1 กระดาษคำตอบที่รู้คำตอบแน่นอน** ไว้เป็น regression fixture ใช้ซ้ำทุกเฟส:
+
 - ใช้ `samples/yothin/doc-60-ans.pdf` (มีอยู่แล้ว) หรือถ่ายรูปจริง 1 แผ่น
 - จดค่าที่ "ถูกต้อง" ลงไฟล์: `student_id` ที่ฝน, คำตอบ q1..60, และคะแนนดิบที่คาดหวังเทียบเฉลย
 - ทุกเฟสต้องอ่าน golden sheet นี้ออกมาได้ค่าเดิมเป๊ะ — ถ้าเพี้ยนแปลว่าเฟสนั้นพัง
@@ -45,7 +46,9 @@
 **เป้า:** ยืนยันว่า engine + `samples/yothin/template.json` อ่าน golden sheet ถูกต้อง และ freeze ไว้เป็น "กระดาษมาตรฐาน"
 
 ### ขั้นตอน
+
 1. สร้าง venv เฉพาะของ engine (แยกจาก Classwise):
+   
    ```powershell
    cd "d:\Cubic World\Claude_Workspace\OMRChecker"
    python -m venv .venv-omr
@@ -54,18 +57,21 @@
    pip install opencv-python        # ไม่อยู่ใน requirements.txt โดยตั้งใจ (ดู CLAUDE.md)
    ```
 2. รัน engine กับ golden sheet ลง output dir ใหม่ (กัน CSV ทับ):
+   
    ```powershell
    python main.py -i samples\yothin -o outputs\yothin_check
    ```
 3. เปิด `outputs\yothin_check\...\Results\Results_*.csv` — คอลัมน์ `student_id`, `q1..q60`, `score`
 
 ### วิธีทดสอบว่าถูกต้อง ✅
+
 - คอลัมน์ `student_id` = ค่าที่ฝนจริงบน golden sheet
 - `q1..q60` ตรงกับที่ฝน (สุ่มเช็ค 5–10 ข้อกับตาเปล่าเทียบ overlay ใน `CheckedOMRs/`)
 - `score` ตรงกับที่คำนวณมือเทียบ `evaluation.json`
 - จด path + ค่าเหล่านี้ไว้เป็น "ค่าอ้างอิง golden" สำหรับเฟสถัดไป
 
 ### Freeze
+
 คัดลอก 2 ไฟล์นี้เป็น asset มาตรฐานสำหรับ Classwise (ทำในเฟส 1): `samples/yothin/template.json`, `samples/yothin/omr_marker.jpg`
 
 ---
@@ -77,12 +83,15 @@
 > เฟสนี้คือ "ยกตรรกะ `web_test/runner.py` เข้ามาเป็น service ของ Django" — โค้ดพิสูจน์แล้วว่าใช้ subprocess boundary เดียวกันได้
 
 ### 1.1 สร้างโครงแอป
+
 ```powershell
 cd "d:\Cubic World\Claude_Workspace\Classwise"
 .\venv\Scripts\Activate.ps1
 python manage.py startapp omr
 ```
+
 โครงไฟล์เป้าหมายในโฟลเดอร์ `omr/`:
+
 ```
 omr/
 ├── apps.py            # ← ตั้ง name = "omr"
@@ -101,8 +110,10 @@ omr/
 ```
 
 ### 1.2 ลงทะเบียนแอป + settings
+
 - `classwise/settings/base.py` — เพิ่ม `"omr"` ท้าย `LOCAL_APPS` (บรรทัด ~45-56)
 - เพิ่มบล็อก OMR ใน `base.py`:
+  
   ```python
   # OMR engine (รีโปแยก + venv ของตัวเอง เรียกเป็น subprocess)
   OMR_ENGINE_DIR = env("OMR_ENGINE_DIR", default=str(BASE_DIR.parent / "OMRChecker"))
@@ -113,7 +124,9 @@ omr/
 - `classwise/urls.py` — เพิ่ม `path('omr/', include('omr.urls')),` (หลังบรรทัด grades, ~27)
 
 ### 1.3 `omr/engine_runner.py` — ยกจาก `web_test/runner.py`
+
 ก๊อป logic เหล่านี้จาก `web_test/runner.py` (พิสูจน์แล้ว) แล้วปรับ:
+
 - `_force_headless()` — **ต้องมี** (บังคับ `show_image_level: 0` กัน cv2.imshow ค้าง) — ยกทั้งฟังก์ชัน
 - `_copy_template_assets()` / `_copy_relative()` — ก๊อปมา แต่ต้นทาง template = `omr/engine_assets/`
 - `build_evaluation_json()` — ก๊อปมาตรงๆ (สร้าง evaluation.json จาก dict เฉลย) จะได้ใช้ในเฟส 3
@@ -125,6 +138,7 @@ omr/
   - **ต่างจาก web_test:** คืน `overlay_path` เป็น path ในดิสก์ (ไม่ใช่ URL) ให้ service ชั้นบนจัดการเก็บลง MEDIA เอง
 
 ### 1.4 View + form + template (เฟส 1: แสดงผลเฉยๆ)
+
 - `omr/forms.py` — `OMRUploadForm` (MultipleFileField รับหลายรูป/PDF) ลอกสไตล์จาก `students/forms.py` `StudentImportForm`
 - `omr/views.py` — 1 view `omr_try(request)` ครอบ `@teacher_or_admin_required` (import จาก `accounts.decorators`):
   - GET → render `upload.html`
@@ -133,13 +147,16 @@ omr/
 - template สืบ `manage_base.html` (base เดิมของหน้าจัดการ) — เช็คชื่อจริงจาก `templates/students/student_import.html`
 
 ### วิธีทดสอบว่าถูกต้อง ✅
+
 1. **Unit test engine boundary** — `omr/tests.py`:
+   
    ```python
    def test_run_engine_reads_golden_sheet(self):
        rows = run_engine([GOLDEN_SHEET_PATH])
        self.assertEqual(rows[0]["student_id"], EXPECTED_ID)   # ค่าจากเฟส 0
        self.assertEqual(rows[0]["answers"]["q1"], EXPECTED_Q1)
    ```
+   
    รัน: `python manage.py test omr`
 2. **Manual end-to-end:** `python manage.py runserver` → ล็อกอินครู → `/omr/try/` → อัปโหลด golden sheet → หน้า result ต้องโชว์ overlay + `student_id`/คำตอบ **ตรงกับค่า golden จากเฟส 0**
 3. **Regression:** ค่าที่จอแสดง = ค่าเดิมเป๊ะจากเฟส 0 (ถ้าเพี้ยน = engine_runner ยกมาผิด)
@@ -153,9 +170,11 @@ omr/
 **เป้า:** ย้าย subprocess ไปหลังคิว worker (1 process, `nice`) หน้าเว็บโชว์ "กำลังประมวลผล..." แล้ว AJAX poll สถานะ
 
 ### 2.1 ติดตั้ง Redis (Memurai) + django-rq
+
 1. ติดตั้ง Memurai (Developer edition) — รันเป็น Windows service ที่ `localhost:6379` ตรวจ: `memurai-cli ping` → `PONG`
 2. `Classwise/requirements.txt` — เพิ่ม `django-rq>=2.10` แล้ว `pip install -r requirements.txt`
 3. `base.py` เพิ่ม:
+   
    ```python
    RQ_QUEUES = {
        "omr": {"HOST": env("REDIS_HOST", default="127.0.0.1"),
@@ -163,12 +182,16 @@ omr/
                "DB": 0, "DEFAULT_TIMEOUT": 900},
    }
    ```
+   
    และเพิ่ม `"django_rq"` ใน `LOCAL_APPS` (หรือ THIRD_PARTY) + `path("django-rq/", include("django_rq.urls"))` ใน urls (หน้า dashboard คิว, ครอบ admin-only)
 
 ### 2.2 แปลง flow เป็น async — ต้องมี model ขั้นต่ำแล้ว
+
 เฟสนี้เริ่มต้องเก็บสถานะงาน → สร้าง model `OMRJob` + `OMRSheetResult` (โครงเต็มดูหัวข้อ "โมเดล" ในเฟส 3 แต่เฟส 2 ใช้แค่ field สถานะ/ผลดิบ ยังไม่ต้องมี `answer_key`)
+
 - `omr/tasks.py` — `def process_job(job_id):` โหลด job → `run_engine()` → เซฟ `OMRSheetResult` ต่อแผ่น (source_image, overlay_image เข้า MEDIA) → set `job.status = DONE`; ถ้า error → `FAILED` + `error_message`
 - `omr/services.py` — `enqueue_job(job)`:
+  
   ```python
   import django_rq
   django_rq.get_queue("omr").enqueue("omr.tasks.process_job", job.id)
@@ -177,14 +200,17 @@ omr/
 - endpoint polling `omr/views.py::job_status(request, pk)` คืน `JsonResponse({"status": job.status})` — ลอก pattern polling จาก `notifications` (กระดิ่งแจ้งเตือน) — JS `setInterval` fetch ทุก 2–3 วิ จนสถานะ `DONE`/`FAILED`
 
 ### 2.3 รัน worker (dev)
+
 ```powershell
 # หน้าต่างที่ 2 (แยกจาก runserver)
 cd "d:\Cubic World\Claude_Workspace\Classwise"; .\venv\Scripts\Activate.ps1
 python manage.py rqworker omr
 ```
+
 > prod: systemd unit รัน `rqworker omr` ด้วย `Nice=10` — บันทึกใน DEPLOY (เฟสหลัง)
 
 ### วิธีทดสอบว่าถูกต้อง ✅
+
 1. **Worker test (RQ sync/burst):** ใน `omr/tests.py` ใช้ `django_rq.get_queue("omr", is_async=False)` หรือ enqueue แล้วรัน `worker.work(burst=True)` → ยืนยัน job ไปจบ `DONE` และมี `OMRSheetResult` ครบตามจำนวนแผ่น ค่าตรง golden
 2. **สถานะไหลถูก:** อัปโหลด → หน้า detail ขึ้น "กำลังประมวลผล..." → (worker ทำงาน) → polling เปลี่ยนเป็นตารางผล **โดยไม่ต้อง refresh มือ**
 3. **เว็บไม่หน่วง:** ระหว่าง worker ประมวลผล เปิดหน้าอื่น (เช่น `/students/`) ต้องตอบเร็วปกติ (พิสูจน์ว่า OMR ไม่บล็อก web process)
@@ -199,6 +225,7 @@ python manage.py rqworker omr
 **เป้า:** ครูสร้าง/เลือกเฉลยจากคลัง → จับคู่ student_id → หน้าตรวจทานแก้ได้ → กด "ยืนยัน" → เขียน `Score` ผ่าน `bulk_record_scores`
 
 ### 3.1 โมเดลเต็ม (`omr/models.py`)
+
 > scope ทุก query ผ่าน `subjects_for(user)` เหมือนทุกแอป
 
 - **`AnswerSheetTemplate`** — กระดาษมาตรฐาน (เฟสแรกมี record เดียว) : `name`, `num_questions=60`, `num_choices=4`, `student_id_digits=5`, `template_json` (TextField/JSON), asset marker
@@ -209,44 +236,55 @@ python manage.py rqworker omr
 `python manage.py makemigrations omr && python manage.py migrate`
 
 ### 3.2 คลังเฉลย + หน้ากรอกเฉลย
+
 - CRUD `AnswerKey` : list/create/edit ครอบ `teacher_or_admin_required` — grid กรอกเฉลย 60 ข้อ × ก-ง (แสดงไทย ก/ข/ค/ง แต่เก็บ A/B/C/D) ลอก mapping `THAI_CHOICE_LABELS`/`ENGINE_CHOICES` จาก `web_test/runner.py:26`
 - ตอนสร้างงานตรวจ ครู "เลือกเฉลยจากคลัง" (dropdown `AnswerKey` ของตัวเอง) → ผูกเข้า `OMRJob`
 
 ### 3.3 Matching + คำนวณคะแนน (`omr/services.py`)
+
 - `match_students(job)` — สำหรับแต่ละ result:
+  
   ```python
   roster = {u.student_id: u for u in get_roster(job.subject)}   # จาก grades.services
   student = roster.get(result.detected_student_id)
   result.matched_student = student
   result.status = "MATCHED" if student else "UNMATCHED"
   ```
+  
   เคสพิเศษ: `detected_student_id` ซ้ำกันในงานเดียว → mark ทั้งคู่ `NEEDS_REVIEW`
 - `compute_scores(job)` :
+  
   ```python
   from decimal import Decimal, ROUND_HALF_UP
   computed = (Decimal(result.raw_score) / job.template.num_questions
               * job.grade_type.max_score).quantize(Decimal("0.01"), ROUND_HALF_UP)
   ```
 - `apply_to_grades(job)` — เขียนจริง (เรียกตอนกดยืนยัน):
+  
   ```python
   scores = {r.matched_student: r.computed_score
             for r in job.results.filter(status="CONFIRMED")}
   bulk_record_scores(grade_type=job.grade_type, scores=scores, recorded_by=job.uploaded_by)
   job.status = "REVIEWED"
   ```
+  
   > ใช้ `grades.services.bulk_record_scores` (grades/services.py:74) ตรงๆ — ไม่เขียน logic คะแนนใหม่ (มันกันเกิน max_score + upsert ให้แล้ว)
 
 ### 3.4 หน้าตรวจทาน (ลอก pattern preview→confirm จาก students import)
+
 โครงเดียวกับ `students/views.py::student_import` + `student_import_confirm` (students/views.py:94):
+
 - หน้า `job_review` : ตารางรายแผ่น — overlay, `detected_student_id`, dropdown เลือกนักเรียนจาก roster (แก้ UNMATCHED มือได้), คำตอบที่อ่าน (แก้ได้), `computed_score`
 - ครูแก้ → บันทึกลงตัว result (status → `CONFIRMED`)
 - **ประตูยืนยัน:** ปุ่ม "ยืนยันบันทึกคะแนน" **disabled จนกว่า** `job.results.exclude(status="CONFIRMED").count() == 0` (ทุกแผ่นต้อง resolved ครบ)
 - กดยืนยัน (POST) → `apply_to_grades(job)` ใน `transaction.atomic()` (all-or-nothing) + server-side guard เช็คซ้ำก่อนเขียน
 
 ### 3.5 Cleanup command
+
 `omr/management/commands/omr_cleanup.py` — ลบ temp dir subprocess ที่ค้างเกิน N ชม. (ลอก pattern `cleanup_pending_attachments`) — **ไม่ลบ** `source_image`/`overlay_image` ใน MEDIA (เก็บถาวร)
 
 ### วิธีทดสอบว่าถูกต้อง (สำคัญสุด — คะแนนกระทบเด็ก) ✅
+
 1. **Unit: compute** — raw 40/60, `max_score=20` → computed `13.33` (เทียบมือ). เช็ค ROUND_HALF_UP
 2. **Unit: matching** — สร้าง roster ปลอม + result ที่ `detected_student_id` (ก) อยู่ใน roster → MATCHED, (ข) ไม่อยู่ → UNMATCHED, (ค) ซ้ำ → NEEDS_REVIEW
 3. **Unit: apply** — เรียก `apply_to_grades` แล้ว query `Score.objects.get(grade_type=..., student=...)` → ค่าตรง `computed_score`; ยืนยันเรียก `bulk_record_scores` จริง (ไม่เขียน Score เอง)
@@ -264,18 +302,21 @@ python manage.py rqworker omr
 - **`Classwise/docs/adr/0002-omr-engine-and-queue.md`** — บันทึก 2 การตัดสินใจ: engine เป็นรีโปแยก + venv ของตัวเอง (เรียก subprocess ผ่าน settings), และเลือก `django-rq` แทน Celery (เหตุผล + ทางเลือกที่ไม่เลือก)
 
 ## ลำดับ commit ที่แนะนำ (ทำงานในรีโป Classwise, branch ใหม่)
+
 1. `omr` scaffold + settings + engine_runner + หน้าลองอัปโหลด (เฟส 1)
 2. models `OMRJob`/`OMRSheetResult` + django-rq + worker + polling (เฟส 2)
 3. `AnswerKey` คลังเฉลย + matching/compute/apply + หน้าตรวจทาน + cleanup (เฟส 3)
 4. CONTEXT.md + ADR 0002
 
 ## ความเสี่ยง / จุดที่ต้องระวัง
+
 - **CSV ทับกัน:** engine append ลง `Results_<hour>.csv` — `engine_runner` ต้องใช้ temp out dir ใหม่ทุกครั้ง (logic เดิมใน runner.py ทำแล้ว — อย่าลืมยกมา)
 - **subprocess timeout:** PDF หลายแผ่นอาจนาน — `OMR_SUBPROCESS_TIMEOUT` ตั้งเผื่อ
 - **student_id ฝนเบลอ/ไม่ครบ 5 หลัก:** ต้องออกมาเป็น UNMATCHED ไม่ใช่ crash — ทดสอบด้วยแผ่นที่ฝน id ไม่ครบ
 - **prod media:** Nginx ต้องตั้ง `client_max_body_size` เผื่อ PDF/หลายรูป (บันทึกใน DEPLOY.md ตอนขึ้น prod)
 
 ## Verification สรุป (คำสั่งเดียวจบต่อเฟส)
+
 - เฟส 0: `python main.py -i samples\yothin -o outputs\yothin_check` → เทียบ CSV กับ golden
 - เฟส 1: `python manage.py test omr` + อัปโหลดจริงเห็น overlay
 - เฟส 2: `python manage.py rqworker omr` + อัปโหลด → จอ update เอง + เว็บไม่หน่วง
