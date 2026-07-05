@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}เฉลย · ตรวจข้อสอบ{% endblock %}
+{% block stepper %}{% set current = 2 %}{% include "_stepper.html" %}{% endblock %}
+{% block content %}
+  <div class="page-head"><h1>เฉลย</h1>
+    <p class="sub">แบบฟอร์มนี้มี {{ fields.questions|length }} ข้อ · ตัวเลือก {{ fields.labels|join(' ') }}</p>
+  </div>
+
+  <form method="post" action="{{ url_for('step_answer_key') }}">
+    <div class="card" style="margin-bottom:18px">
+      <div class="field" style="max-width:520px;margin-bottom:6px">
+        <label>เลือกจากคลังเฉลย</label>
+        <select disabled>
+          <option>— ยังไม่มีเฉลยในคลัง —</option>
+        </select>
+      </div>
+      <p class="hint">เรียกเฉลยที่เคยบันทึกไว้มาใช้ซ้ำ (ต่อกับคลังเฉลยจริงใน Django) — หรือกรอกเฉลยใหม่ด้านล่าง</p>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title" style="margin-bottom:16px">กรอกเฉลยใหม่</h2>
+      {% if not fields.questions %}
+        <div class="empty-state"><p>แบบฟอร์มนี้ไม่มีบล็อกช้อยส์ (MCQ) ให้กรอกเฉลย</p></div>
+      {% else %}
+        <div class="key-grid">
+          {% for q in fields.questions %}
+            <div class="key-row">
+              <span class="qno">{{ loop.index }}.</span>
+              <input type="hidden" name="{{ q }}" value="{{ answers.get(q, '') }}">
+              <div class="bubbles">
+                {% for choice in fields.choices %}
+                  <button type="button" class="bubble {% if answers.get(q) == choice %}on{% endif %}"
+                          data-q="{{ q }}" data-val="{{ choice }}">{{ fields.labels[loop.index0] }}</button>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <label class="checkbox">
+        <input type="checkbox" name="save_to_library" id="save-lib" value="1" {% if save_to_library %}checked{% endif %}>
+        บันทึกเข้าคลังเฉลยเพื่อนำกลับมาใช้ซ้ำ
+      </label>
+      <div class="field" id="lib-name-wrap"
+           style="margin-top:16px;max-width:520px;{% if not save_to_library %}display:none{% endif %}">
+        <label>ชื่อเฉลย <span class="req">*</span></label>
+        <input type="text" name="library_name" id="lib-name"
+               placeholder="เช่น เฉลยกลางภาค เคมี 3 ปี 2569" value="{{ library_name or '' }}"
+               {% if save_to_library %}required{% endif %}>
+        <p class="hint">ตั้งชื่อเพื่อให้ค้นหาเฉลยนี้กลับมาใช้ซ้ำในครั้งถัดไป</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a href="{{ url_for('step_context') }}" class="btn ghost">← ย้อนกลับ</a>
+      <div class="spacer"></div>
+      <button type="submit" class="btn primary">ถัดไป · อัปโหลด →</button>
+    </div>
+  </form>
+
+  <script>
+    document.querySelectorAll('.bubble').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var row = b.closest('.key-row');
+        row.querySelectorAll('.bubble').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        row.querySelector('input[type=hidden]').value = b.dataset.val;
+      });
+    });
+
+    // "บันทึกเข้าคลังเฉลย" reveals a required name field. Without a name the
+    // browser's native required-validation blocks the "ถัดไป" submit.
+    var saveLib = document.getElementById('save-lib');
+    var libWrap = document.getElementById('lib-name-wrap');
+    var libName = document.getElementById('lib-name');
+    libName.required = saveLib.checked;  // keep required in sync on load
+    saveLib.addEventListener('change', function () {
+      libWrap.style.display = saveLib.checked ? '' : 'none';
+      libName.required = saveLib.checked;
+      if (saveLib.checked) libName.focus();
+    });
+  </script>
+{% endblock %}

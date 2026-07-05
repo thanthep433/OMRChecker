@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}ยืนยันบันทึก · ตรวจข้อสอบ{% endblock %}
+{% block stepper %}{% set current = 6 %}{% include "_stepper.html" %}{% endblock %}
+{% block content %}
+  <div class="page-head"><h1>ยืนยันบันทึกคะแนน</h1></div>
+
+  <div class="card">
+    <div class="callout">
+      <span class="k">ตรวจสอบก่อนบันทึก</span> — เมื่อยืนยัน คะแนนจะถูกบันทึกเข้าชิ้นงานผ่านระบบคะแนนของ Classwiser
+      (ในต้นแบบนี้ยังไม่เขียนคะแนนจริง)
+    </div>
+    <table class="data" style="border:none">
+      <tbody>
+        <tr><td class="muted" style="width:200px">วิชา</td><td>{{ subject or '—' }}</td></tr>
+        <tr><td class="muted">ชิ้นงาน</td><td>{{ gradetype or '—' }}</td></tr>
+        <tr><td class="muted">จำนวนแผ่นที่จะบันทึก</td><td><strong>{{ count }}</strong> แผ่น</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <form method="post" action="{{ url_for('confirm') }}">
+    <div class="actions">
+      <a href="{{ url_for('landing') }}" class="btn ghost">← ย้อนกลับ</a>
+      <div class="spacer"></div>
+      <button type="submit" class="btn primary btn-lg">✓ ยืนยันบันทึกคะแนน</button>
+    </div>
+  </form>
+{% endblock %}

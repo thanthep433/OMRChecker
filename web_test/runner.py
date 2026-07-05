@@ -12,6 +12,7 @@ can serve the overlay images / CSV back to the browser.
 """
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,11 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
+
+# Thai choice labels shown in the answer-key grid, mapped positionally onto the
+# engine's internal A/B/C/D/E bubble values.
+THAI_CHOICE_LABELS = ["ก", "ข", "ค", "ง", "จ", "ฉ"]
+ENGINE_CHOICES = ["A", "B", "C", "D", "E", "F"]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SAMPLES_DIR = REPO_ROOT / "samples"
@@ -86,6 +92,95 @@ def save_template_json(template_id, text):
 
 
 # --------------------------------------------------------------------------- #
+# Answer-key grid: derive the MCQ questions a template defines
+# --------------------------------------------------------------------------- #
+_RANGE_RE = re.compile(r"^(.*?)(\d+)\.\.(\d+)$")
+
+
+def _expand_label(label):
+    """Expand a range label like 'q1..10' into ['q1', ..., 'q10']."""
+    m = _RANGE_RE.match(label)
+    if not m:
+        return [label]
+    prefix, start, end = m.group(1), int(m.group(2)), int(m.group(3))
+    step = 1 if end >= start else -1
+    return [f"{prefix}{i}" for i in range(start, end + step, step)]
+
+
+def _mcq_choice_count(block):
+    """Number of MCQ choices a field block offers, or None if it isn't MCQ.
+
+    Handles the QTYPE_MCQ4 / QTYPE_MCQ5 (and _RTL) presets plus explicit
+    letter ``bubbleValues``. Integer/other blocks (student_id, Roll) return None.
+    """
+    field_type = block.get("fieldType", "")
+    if field_type.startswith("QTYPE_MCQ"):
+        m = re.search(r"MCQ(\d+)", field_type)
+        return int(m.group(1)) if m else None
+    # Explicit values only count as an MCQ question when they are the standard
+    # consecutive A, B, C, ... choice sequence. This excludes non-question letter
+    # blocks such as a difficulty flag with bubbleValues ["E", "H"].
+    values = block.get("bubbleValues")
+    if values and all(isinstance(v, str) and len(v) == 1 for v in values):
+        expected = [chr(ord("A") + i) for i in range(len(values))]
+        if [v.upper() for v in values] == expected:
+            return len(values)
+    return None
+
+
+def _question_sort_key(label):
+    m = re.search(r"(\d+)$", label)
+    return (int(m.group(1)) if m else 0, label)
+
+
+def question_fields(template_id):
+    """Return {'questions', 'choices', 'labels'} for the MCQ blocks of a template.
+
+    ``questions`` is the ordered list of question labels (e.g. q1..q60);
+    ``choices`` the engine values (['A','B','C','D']); ``labels`` the Thai
+    display letters (['ก','ข','ค','ง']). Returns empty questions if the template
+    has no MCQ blocks. Used to build the answer-key grid in the UI.
+    """
+    template = json.loads(
+        (_resolve_template_dir(template_id) / "template.json").read_text(encoding="utf-8")
+    )
+    questions, count = [], 0
+    for block in template.get("fieldBlocks", {}).values():
+        n = _mcq_choice_count(block)
+        if not n:
+            continue
+        count = max(count, n)
+        for label in block.get("fieldLabels", []):
+            questions.extend(_expand_label(label))
+    questions = sorted(dict.fromkeys(questions), key=_question_sort_key)
+    return {
+        "questions": questions,
+        "choices": ENGINE_CHOICES[:count],
+        "labels": THAI_CHOICE_LABELS[:count],
+    }
+
+
+def build_evaluation_json(questions, answers):
+    """Build an evaluation.json dict from a grid answer key.
+
+    ``answers`` maps question label -> engine choice ('A'..). Questions left
+    blank get an empty string so the engine scores them as unmarked/incorrect.
+    """
+    return {
+        "source_type": "custom",
+        "options": {
+            "questions_in_order": list(questions),
+            "answers_in_order": [answers.get(q, "") for q in questions],
+            "should_explain_scoring": True,
+            "enable_evaluation_table_to_csv": True,
+        },
+        "marking_schemes": {
+            "DEFAULT": {"correct": "1", "incorrect": "0", "unmarked": "0"}
+        },
+    }
+
+
+# --------------------------------------------------------------------------- #
 # Running the engine
 # --------------------------------------------------------------------------- #
 def _copy_template_assets(template_dir, in_dir):
@@ -146,11 +241,19 @@ def _force_headless(in_dir):
     config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
 
 
-def run_omr(template_id, uploaded_files, template_json_override=None):
+def run_omr(
+    template_id,
+    uploaded_files,
+    template_json_override=None,
+    evaluation_json_override=None,
+):
     """Run the OMR engine over uploaded images. Returns a result dict.
 
     uploaded_files: list of (filename, bytes).
     template_json_override: edited template.json text from the UI, or None.
+    evaluation_json_override: answer key as a dict (from the grid) written over
+        any evaluation.json shipped with the template, so scores reflect the key
+        the teacher entered in the UI. None keeps the template's own key (if any).
     """
     _reap_old_runs()
     template_dir = _resolve_template_dir(template_id)
@@ -166,6 +269,12 @@ def run_omr(template_id, uploaded_files, template_json_override=None):
     if template_json_override is not None and template_json_override.strip():
         json.loads(template_json_override)  # validate before writing
         (in_dir / "template.json").write_text(template_json_override, encoding="utf-8")
+
+    if evaluation_json_override is not None:
+        (in_dir / "evaluation.json").write_text(
+            json.dumps(evaluation_json_override, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
     _force_headless(in_dir)
 

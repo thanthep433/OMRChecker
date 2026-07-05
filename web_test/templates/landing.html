@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}ตรวจข้อสอบ · Classwiser{% endblock %}
+{% block content %}
+  <div class="page-head row-between">
+    <div>
+      <h1>ตรวจข้อสอบ</h1>
+      <p class="sub">อัปโหลดกระดาษคำตอบ → ระบบอ่านคะแนน → ครูตรวจทาน → บันทึกเข้าคะแนน</p>
+    </div>
+    <a href="{{ url_for('step_context') }}" class="btn primary btn-lg">+ เริ่มตรวจชุดใหม่</a>
+  </div>
+
+  <div class="card">
+    <div class="field" style="max-width:520px;margin-bottom:0">
+      <label>วิชา</label>
+      <select>
+        {% for s in subjects %}<option>{{ s }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h2 class="card-title">งานตรวจล่าสุด</h2>
+    <div class="empty-state">
+      <div class="icon">🗂️</div>
+      <p>ยังไม่มีงานตรวจในวิชานี้</p>
+      <p class="hint">ประวัติงานตรวจจะแสดงที่นี่ (ต่อกับฐานข้อมูลจริงใน Django)</p>
+    </div>
+  </div>
+{% endblock %}

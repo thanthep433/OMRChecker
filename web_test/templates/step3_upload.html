@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}อัปโหลด · ตรวจข้อสอบ{% endblock %}
+{% block stepper %}{% set current = 3 %}{% include "_stepper.html" %}{% endblock %}
+{% block content %}
+  <div class="page-head"><h1>อัปโหลดกระดาษคำตอบ</h1>
+    <p class="sub">เลือกรูปถ่าย/สแกน หรือไฟล์ PDF ได้หลายไฟล์พร้อมกัน</p>
+  </div>
+
+  <form method="post" action="{{ url_for('run') }}" enctype="multipart/form-data" data-processing>
+    <input type="hidden" name="template" value="{{ template_id }}">
+
+    <div class="card">
+      <div class="field" style="margin-bottom:6px">
+        <label>ไฟล์กระดาษคำตอบ <span class="req">*</span></label>
+        <input type="file" name="images" accept="image/*,.pdf" multiple required>
+      </div>
+      <p class="hint">แบบฟอร์มที่เลือก: <code>{{ template_id }}</code> · {{ n_questions }} ข้อ ·
+        ลองไฟล์ตัวอย่าง <code>samples/yothin/</code> หรือ <code>samples/sample1/MobileCamera/</code></p>
+
+      <!-- Developer-only: tune template.json coordinates against the uploaded sheet -->
+      <div class="dev-panel">
+        <span class="dev-label">⚙ โหมดพัฒนา · แก้ template.json</span>
+        <textarea name="template_json" spellcheck="false">{{ template_json }}</textarea>
+        <div class="actions" style="margin-top:12px">
+          <button type="submit" class="btn ghost" formaction="{{ url_for('save_template') }}" formnovalidate>
+            💾 บันทึก template.json
+          </button>
+          <span class="hint" style="margin:0">บันทึกได้เฉพาะ template ใน <code>web_test/templates_data/</code></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a href="{{ url_for('step_answer_key') }}" class="btn ghost">← ย้อนกลับ</a>
+      <div class="spacer"></div>
+      <button type="submit" class="btn primary btn-lg">▶ ประมวลผล</button>
+    </div>
+  </form>
+{% endblock %}

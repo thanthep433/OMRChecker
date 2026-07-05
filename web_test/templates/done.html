@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}บันทึกแล้ว · ตรวจข้อสอบ{% endblock %}
+{% block content %}
+  <div class="card" style="text-align:center;padding:48px 24px">
+    <div style="font-size:2.6rem">✅</div>
+    <h1 style="margin:12px 0 6px">บันทึกคะแนนเรียบร้อย</h1>
+    <p class="muted">คะแนนจะไปแสดงในหน้าสรุปคะแนน / export / portal นักเรียน (ต่อจริงใน Django)</p>
+    <div class="actions" style="justify-content:center">
+      <a href="{{ url_for('landing') }}" class="btn primary">กลับหน้าตรวจข้อสอบ</a>
+    </div>
+  </div>
+{% endblock %}

@@ -44,6 +44,19 @@ The correct answers for one gradable item, entered by the teacher inside
 Classwise (not by hand-editing `evaluation.json`).
 _Avoid_: solution, evaluation, key file
 
+**Answer key library** (คลังเฉลย):
+A store of reusable **answer keys** a teacher can pick from instead of re-entering
+the same key for a new gradable item. An answer key is authored once, optionally
+saved to the library, and applied to a gradable item at grading time — so the key
+is reusable while the application is per-item.
+_Avoid_: key bank, template answers
+
+**Grading run** (งานตรวจ):
+One batch of answer sheets processed together against one answer key — the unit
+listed on the "ตรวจข้อสอบ" landing page and modelled as `OMRJob` in the Django
+integration. One run yields one result per sheet.
+_Avoid_: job (unqualified), batch, session
+
 **Raw score**:
 The count of correct answers the engine computes. Distinct from the **computed
 score**, which is `raw / num_questions * GradeType.max_score`.

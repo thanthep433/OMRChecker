@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ตรวจข้อสอบ · Classwiser{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    /* Restore developer mode before paint to avoid a flash of dev panels. */
+    if (localStorage.getItem('omr-dev') === '1') document.documentElement.classList.add('dev');
+  </script>
+</head>
+<body>
+  <!-- Classwiser shell — nav mirrors the real app; only "ตรวจข้อสอบ" is wired here.
+       The other menu items are placeholders so the prototype sits in the real chrome. -->
+  <header class="nav">
+    <div class="nav-inner">
+      <a href="{{ url_for('landing') }}" class="brand">Classwiser</a>
+      <nav class="nav-menu">
+        <a href="#">ข้อมูลโรงเรียน</a>
+        <a href="#">นักเรียน</a>
+        <a href="#">เช็คชื่อ</a>
+        <a href="#">คะแนน</a>
+        <a href="#">การบ้าน</a>
+        <a href="#">แผนการสอน</a>
+        <a href="{{ url_for('landing') }}" class="active">ตรวจข้อสอบ</a>
+        <a href="#">รายงาน</a>
+      </nav>
+      <div class="nav-right">
+        <span class="term-pill">ปี 2569 · ภาค 1</span>
+        <span class="bell">🔔</span>
+        <label class="dev-toggle" title="สลับโหมดพัฒนา (แสดง/ซ่อนเครื่องมือ dev)">
+          <span class="track"></span>
+          <input type="checkbox" id="dev-toggle" hidden onchange="toggleDev(this.checked)">
+          โหมดพัฒนา
+        </label>
+        <a href="#" class="logout">ออกจากระบบ</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    {% block stepper %}{% endblock %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, msg in messages %}
+        <div class="flash {{ category }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Cosmetic processing overlay (step 4). Real polling happens in Django. -->
+  <div class="processing-overlay" id="processing">
+    <div class="processing-card">
+      <div class="spinner"></div>
+      <strong>กำลังประมวลผล…</strong>
+      <p class="muted" style="margin:.4rem 0 0">ระบบกำลังอ่านกระดาษคำตอบ</p>
+    </div>
+  </div>
+
+  <script>
+    function toggleDev(on) {
+      document.documentElement.classList.toggle('dev', on);
+      localStorage.setItem('omr-dev', on ? '1' : '0');
+    }
+    document.getElementById('dev-toggle').checked =
+      document.documentElement.classList.contains('dev');
+
+    // Show the processing overlay when a form marked data-processing submits.
+    document.querySelectorAll('form[data-processing]').forEach(function (f) {
+      f.addEventListener('submit', function () {
+        document.getElementById('processing').classList.add('show');
+      });
+    });
+  </script>
+</body>
+</html>

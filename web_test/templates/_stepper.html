@@ -1,0 +1,17 @@
+{# Wizard progress bar. Caller sets `current` (1..6). #}
+{% set steps = [
+  (1, 'วิชา · ชิ้นงาน · กระดาษ'),
+  (2, 'เฉลย'),
+  (3, 'อัปโหลด'),
+  (4, 'ประมวลผล'),
+  (5, 'ตรวจทาน'),
+  (6, 'ยืนยัน'),
+] %}
+<div class="stepper">
+  {% for n, label in steps %}
+    <div class="step {% if n < current %}done{% elif n == current %}current{% endif %}">
+      <span class="num">{% if n < current %}✓{% else %}{{ n }}{% endif %}</span>
+      {{ label }}
+    </div>
+  {% endfor %}
+</div>

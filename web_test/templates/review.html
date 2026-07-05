@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}ตรวจทาน · ตรวจข้อสอบ{% endblock %}
+{% block stepper %}{% set current = 5 %}{% include "_stepper.html" %}{% endblock %}
+{% block content %}
+  {% set qcols = result.columns | reject('equalto', 'student_id') | list %}
+  {% set has_sid = 'student_id' in result.columns %}
+
+  <div class="page-head"><h1>ตรวจทานรายแผ่น</h1>
+    <p class="sub">กดที่แถวเพื่อดูภาพและแก้คำตอบ · แผ่นที่ต้องตรวจถูกไฮไลต์ไว้</p>
+  </div>
+
+  {% if result.returncode != 0 %}
+    <div class="flash error">OMRChecker จบด้วย exit code {{ result.returncode }} — ดู log ในโหมดพัฒนา (บางแผ่นอาจยังอ่านได้)</div>
+  {% endif %}
+
+  <div class="summary">
+    <span class="pill ok">{{ result.rows|length }} แผ่นอ่านได้</span>
+    {% if result.multi_marked %}<span class="pill warn">{{ result.multi_marked|length }} ฝนซ้ำ</span>{% endif %}
+    {% if result.errors %}<span class="pill bad">{{ result.errors|length }} อ่านไม่ได้</span>{% endif %}
+    {% if result.csv_url %}<a class="pill link" href="{{ result.csv_url }}?download=1">⬇ ดาวน์โหลด CSV</a>{% endif %}
+  </div>
+
+  {% if not result.rows %}
+    <div class="card"><div class="empty-state"><div class="icon">📄</div>
+      <p>ไม่มีแผ่นที่อ่านได้ — ตรวจแบบฟอร์ม/รูป แล้วดู log ในโหมดพัฒนา</p></div></div>
+  {% else %}
+  <div class="review-layout">
+    <!-- Master: table of every sheet -->
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr>
+          <th></th><th>แผ่น</th><th>รหัสที่อ่านได้</th><th>นักเรียนที่จับคู่</th><th>คะแนน</th><th>สถานะ</th>
+        </tr></thead>
+        <tbody>
+          {% for row in result.rows %}
+            {% set sid = row.answers['student_id'] if has_sid else '' %}
+            {% set flag = row.file_id in result.multi_marked %}
+            <tr class="clickable {% if flag %}attention{% endif %}" data-idx="{{ loop.index0 }}">
+              <td>{% if row.overlay_url %}<img class="thumb" src="{{ row.overlay_url }}" alt="">{% endif %}</td>
+              <td>{{ row.file_id }}</td>
+              <td class="num-cell">{{ sid or '—' }}</td>
+              <td class="empty-cell">รอจับคู่ใน Django</td>
+              <td class="num-cell">{{ row.score }}</td>
+              <td>{% if flag %}<span class="badge bad">ฝนซ้ำ</span>{% else %}<span class="badge ok">พร้อม</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Detail: selected sheet's overlay + editable answers -->
+    <div class="detail">
+      <div class="card">
+        <div id="detail-empty" class="detail-empty">เลือกแผ่นจากตารางเพื่อดูภาพและตรวจทานคำตอบ</div>
+        <div id="detail-body" style="display:none">
+          <div class="row-between" style="margin-bottom:10px">
+            <strong id="d-file"></strong><span class="num-cell">คะแนน: <strong id="d-score"></strong></span>
+          </div>
+          <a id="d-link" target="_blank" rel="noopener">
+            <img id="d-overlay" class="overlay-img" alt="overlay">
+          </a>
+          <p class="hint">คำตอบที่อ่านได้ (แก้ได้ · ช่องเหลืองคือยังไม่ได้ฝน) —
+            การแก้จะบันทึกจริงใน Django</p>
+          <div id="d-answers" class="ans-edit"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Developer-only: raw engine log -->
+  <div class="dev-panel">
+    <span class="dev-label">⚙ โหมดพัฒนา · engine log</span>
+    <pre>{{ result.stdout }}{{ "\n--- stderr ---\n" if result.stderr }}{{ result.stderr }}</pre>
+  </div>
+
+  <div class="actions">
+    <a href="{{ url_for('step_upload') }}" class="btn ghost">← อัปโหลดใหม่</a>
+    <div class="spacer"></div>
+    <a href="{{ url_for('confirm', count=result.rows|length) }}" class="btn primary">ถัดไป · ยืนยันบันทึก →</a>
+  </div>
+
+  <script>
+    var SHEETS = {{ result.rows | tojson }};
+    var QCOLS = {{ qcols | tojson }};
+    var THAI = {{ thai_map | tojson }};
+    var emptyEl = document.getElementById('detail-empty');
+    var bodyEl = document.getElementById('detail-body');
+
+    // Show detected answers as ก/ข/ค/ง instead of the engine's raw A/B/C/D.
+    // Maps each character so multi-marked values (e.g. "AB") still convert;
+    // unknown characters pass through unchanged.
+    function toThai(v) {
+      return (v || '').split('').map(function (c) { return THAI[c] || c; }).join('');
+    }
+
+    function showSheet(i) {
+      var s = SHEETS[i];
+      emptyEl.style.display = 'none';
+      bodyEl.style.display = 'block';
+      document.getElementById('d-file').textContent = s.file_id;
+      document.getElementById('d-score').textContent = s.score;
+      var img = document.getElementById('d-overlay');
+      var link = document.getElementById('d-link');
+      if (s.overlay_url) { img.src = s.overlay_url; link.href = s.overlay_url; img.style.display=''; }
+      else { img.style.display = 'none'; }
+      var wrap = document.getElementById('d-answers');
+      wrap.innerHTML = '';
+      QCOLS.forEach(function (q) {
+        var raw = s.answers[q] || '';
+        var val = toThai(raw);
+        var cell = document.createElement('div');
+        cell.className = 'cell' + (raw ? '' : ' blank');
+        cell.innerHTML = '<div class="q">' + q + '</div>';
+        var inp = document.createElement('input');
+        inp.type = 'text'; inp.value = val; inp.style.width = '100%'; inp.style.padding = '2px 4px';
+        cell.appendChild(inp);
+        wrap.appendChild(cell);
+      });
+    }
+    document.querySelectorAll('tr.clickable').forEach(function (tr) {
+      tr.addEventListener('click', function () {
+        document.querySelectorAll('tr.clickable').forEach(function (x){ x.classList.remove('selected'); });
+        tr.classList.add('selected');
+        showSheet(parseInt(tr.dataset.idx, 10));
+      });
+    });
+    if (SHEETS.length) document.querySelector('tr.clickable').click();
+  </script>
+{% endblock %}
