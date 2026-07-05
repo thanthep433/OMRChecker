@@ -1,0 +1,23 @@
+{
+  "source_type": "custom",
+  "options": {
+    "questions_in_order": ["q1..60"],
+    "answers_in_order": [
+      "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",
+      "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",
+      "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",
+      "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",
+      "A", "A", "A", "A", "A", "A", "A", "A", "A", "A",
+      "A", "A", "A", "A", "A", "A", "A", "A", "A", "A"
+    ],
+    "should_explain_scoring": true,
+    "enable_evaluation_table_to_csv": true
+  },
+  "marking_schemes": {
+    "DEFAULT": {
+      "correct": "1",
+      "incorrect": "0",
+      "unmarked": "0"
+    }
+  }
+}

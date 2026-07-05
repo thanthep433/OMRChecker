@@ -1,0 +1,68 @@
+{
+  "pageDimensions": [1038, 1566],
+  "bubbleDimensions": [25, 25],
+  "customLabels": {
+    "student_id": ["studentId1..5"]
+  },
+  "outputColumns": ["student_id", "q1..60"],
+  "preProcessors": [
+    {
+      "name": "CropOnMarkers",
+      "options": {
+        "relativePath": "omr_marker.jpg",
+        "sheetToMarkerWidthRatio": 15
+      }
+    }
+  ],
+  "fieldBlocks": {
+    "StudentID": {
+      "fieldType": "QTYPE_INT",
+      "fieldLabels": ["studentId1..5"],
+      "origin": [148, 464],
+      "labelsGap": 40.5,
+      "bubblesGap": 30.7
+    },
+    "MCQ_Q1_10": {
+      "fieldType": "QTYPE_MCQ4",
+      "fieldLabels": ["q1..10"],
+      "origin": [482, 456],
+      "bubblesGap": 40.5,
+      "labelsGap": 33.33
+    },
+    "MCQ_Q11_20": {
+      "fieldType": "QTYPE_MCQ4",
+      "fieldLabels": ["q11..20"],
+      "origin": [482, 824],
+      "bubblesGap": 40.5,
+      "labelsGap": 33.33
+    },
+    "MCQ_Q21_30": {
+      "fieldType": "QTYPE_MCQ4",
+      "fieldLabels": ["q21..30"],
+      "origin": [482, 1192],
+      "bubblesGap": 40.5,
+      "labelsGap": 33.33
+    },
+    "MCQ_Q31_40": {
+      "fieldType": "QTYPE_MCQ4",
+      "fieldLabels": ["q31..40"],
+      "origin": [758, 456],
+      "bubblesGap": 40.5,
+      "labelsGap": 33.33
+    },
+    "MCQ_Q41_50": {
+      "fieldType": "QTYPE_MCQ4",
+      "fieldLabels": ["q41..50"],
+      "origin": [758, 824],
+      "bubblesGap": 40.5,
+      "labelsGap": 33.33
+    },
+    "MCQ_Q51_60": {
+      "fieldType": "QTYPE_MCQ4",
+      "fieldLabels": ["q51..60"],
+      "origin": [758, 1192],
+      "bubblesGap": 40.5,
+      "labelsGap": 33.33
+    }
+  }
+}
