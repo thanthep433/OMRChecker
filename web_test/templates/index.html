@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OMRChecker · Test UI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>OMRChecker · Web Test UI</h1>
+    <p class="sub">พิสูจน์ว่า engine อ่านกระดาษถูก + จูน <code>template.json</code> ก่อนนำไปรวมกับ Django
+      (ดูแนวทางใน <code>0003-omr-integration.md</code>)</p>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, msg in messages %}
+      <div class="flash {{ category }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+
+  <form method="get" action="{{ url_for('index') }}" class="template-picker">
+    <label>เลือก template folder:
+      <select name="template" onchange="this.form.submit()">
+        {% for t in templates %}
+          <option value="{{ t.id }}" {% if t.id == selected %}selected{% endif %}>{{ t.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <noscript><button type="submit">โหลด</button></noscript>
+  </form>
+
+  <form method="post" action="{{ url_for('run') }}" enctype="multipart/form-data" class="run-form">
+    <input type="hidden" name="template" value="{{ selected or '' }}">
+
+    <fieldset>
+      <legend>1 · อัปโหลดรูป / PDF (เลือกได้หลายไฟล์)</legend>
+      <input type="file" name="images" accept="image/*,.pdf" multiple required>
+      <p class="hint">ลองไฟล์ตัวอย่าง: <code>samples/sample1/MobileCamera/sheet1.jpg</code></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>2 · แก้ <code>template.json</code> (ไม่บังคับ — แก้แล้วกด Run เพื่อดูผลทันที)</legend>
+      <textarea name="template_json" spellcheck="false" rows="20">{{ template_json }}</textarea>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit" class="primary">▶ Run OMR</button>
+      <button type="submit" formaction="{{ url_for('save_template') }}" formnovalidate class="ghost">
+        💾 Save template.json
+      </button>
+    </div>
+    <p class="hint">Save เขียนกลับได้เฉพาะ template ใน <code>web_test/templates_data/</code>
+      (samples เป็น read-only)</p>
+  </form>
+</body>
+</html>

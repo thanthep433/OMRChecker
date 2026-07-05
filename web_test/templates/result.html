@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ผลตรวจ · OMRChecker</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>ผลการตรวจ</h1>
+    <p><a href="{{ url_for('index', template=template_id) }}">← กลับไปหน้าอัปโหลด</a></p>
+  </header>
+
+  {% if result.returncode != 0 %}
+    <div class="flash error">
+      OMRChecker จบด้วย exit code {{ result.returncode }} — ดู stderr ด้านล่าง
+      (ยังอาจมีบางแผ่นที่อ่านได้)
+    </div>
+  {% endif %}
+
+  <section class="summary">
+    <span class="pill ok">{{ result.rows|length }} แผ่นอ่านได้</span>
+    {% if result.multi_marked %}<span class="pill warn">{{ result.multi_marked|length }} ฝนซ้ำ</span>{% endif %}
+    {% if result.errors %}<span class="pill bad">{{ result.errors|length }} error</span>{% endif %}
+    {% if result.csv_url %}
+      <a class="pill link" href="{{ result.csv_url }}?download=1">⬇ ดาวน์โหลด CSV</a>
+    {% endif %}
+  </section>
+
+  {% if not result.rows %}
+    <div class="flash error">ไม่มีแผ่นที่อ่านได้เลย — ตรวจ template.json / รูป แล้วดู log ด้านล่าง</div>
+  {% endif %}
+
+  {% for row in result.rows %}
+    <article class="sheet">
+      <div class="sheet-head">
+        <h2>{{ row.file_id }}</h2>
+        <span class="score">score: {{ row.score }}</span>
+      </div>
+      <div class="sheet-body">
+        <div class="overlay">
+          {% if row.overlay_url %}
+            <a href="{{ row.overlay_url }}" target="_blank" rel="noopener">
+              <img src="{{ row.overlay_url }}" alt="overlay {{ row.file_id }}">
+            </a>
+          {% else %}
+            <p class="hint">(ไม่พบรูป overlay)</p>
+          {% endif %}
+        </div>
+        <div class="answers">
+          <table>
+            <thead><tr><th>field</th><th>คำตอบ</th></tr></thead>
+            <tbody>
+              {% for col in result.columns %}
+                <tr>
+                  <td>{{ col }}</td>
+                  <td class="{% if not row.answers[col] %}empty{% endif %}">{{ row.answers[col] or '—' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </article>
+  {% endfor %}
+
+  {% if result.multi_marked %}
+    <section><h3>ฝนซ้ำ (multi-marked)</h3><ul>
+      {% for f in result.multi_marked %}<li>{{ f }}</li>{% endfor %}
+    </ul></section>
+  {% endif %}
+
+  {% if result.errors %}
+    <section><h3>อ่านไม่ได้ (errors)</h3><ul>
+      {% for f in result.errors %}<li>{{ f }}</li>{% endfor %}
+    </ul></section>
+  {% endif %}
+
+  <details class="logs">
+    <summary>engine log (stdout / stderr)</summary>
+    <h4>stdout</h4><pre>{{ result.stdout }}</pre>
+    <h4>stderr</h4><pre>{{ result.stderr }}</pre>
+  </details>
+</body>
+</html>

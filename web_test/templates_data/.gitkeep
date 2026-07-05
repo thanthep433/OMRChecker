@@ -1,0 +1,4 @@
+# Put your own tuned template folders here, e.g.:
+#   web_test/templates_data/classwise_standard/template.json
+# The web UI's "Save template.json" button writes only into this directory
+# (samples/ is treated as read-only).

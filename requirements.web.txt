@@ -1,0 +1,9 @@
+# Dependencies for the standalone web test UI (web_test/).
+# Install alongside the core requirements:
+#   pip install -r requirements.txt -r requirements.web.txt
+#
+# NOTE: opencv-python is a runtime dependency of the OMR engine itself but is
+# intentionally NOT in requirements.txt (upstream leaves it to the user). We
+# pin it here so the test UI works out of the box.
+flask>=3.0.0
+opencv-python>=4.8.0
